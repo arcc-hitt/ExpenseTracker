@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react'
 import Modal from '../components/Modal'
+import { useSelector, useDispatch } from 'react-redux'
+import { setExpenses, addExpense, deleteExpense, editExpense } from '../slices/expensesSlice'
+import { login } from '../slices/authSlice'
 
-export default function Home({ onLogout, onCompleteProfile }) {
+export default function Home({ onCompleteProfile }) {
+  const dispatch = useDispatch()
+  const { token, userId } = useSelector(state => state.auth)
+  const expenses = useSelector(state => state.expenses.expenses)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [userMeta, setUserMeta] = useState(null) // { email, emailVerified }
   const [sending, setSending] = useState(false)
   const [message, setMessage] = useState(null)
   const [sendError, setSendError] = useState(null)
-  const [uid, setUid] = useState(null)
-  const [idTokenState, setIdTokenState] = useState(null)
   const [expSubmitting, setExpSubmitting] = useState(false)
   const [expError, setExpError] = useState(null)
   // Local-only Daily Expenses state
@@ -17,7 +21,6 @@ export default function Home({ onLogout, onCompleteProfile }) {
   const [desc, setDesc] = useState('')
   const [category, setCategory] = useState('')
   const [expErrors, setExpErrors] = useState({})
-  const [expenses, setExpenses] = useState([])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [currentExpense, setCurrentExpense] = useState(null)
@@ -56,6 +59,10 @@ export default function Home({ onLogout, onCompleteProfile }) {
           return
         }
 
+        if (!userId) {
+          dispatch(login({ token: idToken, userId: uid }))
+        }
+
         const profileUrl = `${dbUrl.replace(/\/$/, '')}/users/${uid}/profile.json?auth=${idToken}`
         const profileRes = await fetch(profileUrl)
         if (!profileRes.ok) {
@@ -67,8 +74,6 @@ export default function Home({ onLogout, onCompleteProfile }) {
         if (mounted) setProfile(profileData)
         // fetch expenses for the user
         if (mounted) {
-          setIdTokenState(idToken)
-          setUid(uid)
           // load expenses
           try {
             const expUrl = `${dbUrl.replace(/\/$/, '')}/users/${uid}/expenses.json?auth=${idToken}`
@@ -79,7 +84,7 @@ export default function Home({ onLogout, onCompleteProfile }) {
                 const list = Object.keys(expJson || {}).map((key) => ({ id: key, ...expJson[key] }))
                 // sort by timestamp desc
                 list.sort((a, b) => (b.ts || 0) - (a.ts || 0))
-                setExpenses(list)
+                dispatch(setExpenses(list))
               }
             }
           } catch (err) {
@@ -95,7 +100,7 @@ export default function Home({ onLogout, onCompleteProfile }) {
 
     loadProfile()
     return () => (mounted = false)
-  }, [])
+  }, [dispatch, userId])
 
   return (
     <div className="w-full max-w-2xl mx-auto text-center">
@@ -204,7 +209,7 @@ export default function Home({ onLogout, onCompleteProfile }) {
                 setExpErrors(errors)
                 if (Object.keys(errors).length > 0) return
 
-                if (!uid || !idTokenState) {
+                if (!userId || !token) {
                   setExpError('Not authenticated')
                   return
                 }
@@ -219,7 +224,7 @@ export default function Home({ onLogout, onCompleteProfile }) {
                 setExpSubmitting(true)
                 try {
                   const dbUrl = import.meta.env.VITE_FIREBASE_DATABASE_URL
-                  const postUrl = `${dbUrl.replace(/\/$/, '')}/users/${uid}/expenses.json?auth=${idTokenState}`
+                  const postUrl = `${dbUrl.replace(/\/$/, '')}/users/${userId}/expenses.json?auth=${token}`
                   const res = await fetch(postUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -232,7 +237,7 @@ export default function Home({ onLogout, onCompleteProfile }) {
                   // Firebase returns { name: '<generated-key>' }
                   const newId = json.name
                   const item = { id: newId, ...payload }
-                  setExpenses((prev) => [item, ...prev])
+                  dispatch(addExpense(item))
                   setAmount('')
                   setDesc('')
                   setCategory('')
@@ -300,37 +305,52 @@ export default function Home({ onLogout, onCompleteProfile }) {
               {expenses.length === 0 ? (
                 <p className="text-sm text-gray-600 dark:text-gray-300">No expenses added yet.</p>
               ) : (
-                <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {expenses.map((ex) => (
-                    <li key={ex.id} className="py-3 flex items-center justify-between">
-                      <div className="text-left">
-                        <p className="text-gray-800 dark:text-gray-100 font-medium">{ex.desc}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(ex.ts).toLocaleString()} • {ex.category}</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right font-semibold text-gray-800 dark:text-gray-100">₹ {ex.amount.toFixed(2)}</div>
-                        <button
-                          onClick={() => {
-                            setCurrentExpense(ex)
-                            setShowEditModal(true)
-                          }}
-                          className="text-sm bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded"
-                        >
-                          Edit
+                <div>
+                  <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {expenses.map((ex) => (
+                      <li key={ex.id} className="py-3 flex items-center justify-between">
+                        <div className="text-left">
+                          <p className="text-gray-800 dark:text-gray-100 font-medium">{ex.desc}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(ex.ts).toLocaleString()} • {ex.category}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right font-semibold text-gray-800 dark:text-gray-100">₹ {ex.amount.toFixed(2)}</div>
+                          <button
+                            onClick={() => {
+                              setCurrentExpense(ex)
+                              setShowEditModal(true)
+                            }}
+                            className="text-sm bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => {
+                              setCurrentExpense(ex)
+                              setShowDeleteConfirm(true)
+                            }}
+                            className="text-sm bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">Total Expenses:</span>
+                      <span className="text-lg font-bold text-gray-800 dark:text-gray-100">₹ {expenses.reduce((sum, ex) => sum + ex.amount, 0).toFixed(2)}</span>
+                    </div>
+                    {expenses.reduce((sum, ex) => sum + ex.amount, 0) > 10000 && (
+                      <div className="mt-4">
+                        <button className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded">
+                          Activate Premium
                         </button>
-                        <button
-                          onClick={() => {
-                            setCurrentExpense(ex)
-                            setShowDeleteConfirm(true)
-                          }}
-                          className="text-sm bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded"
-                        >
-                          Delete
-                        </button>
                       </div>
-                    </li>
-                  ))}
-                </ul>
+                    )}
+                  </div>
+                </div>
               )}
               {/* Delete confirmation modal */}
               {showDeleteConfirm && currentExpense && (
@@ -340,14 +360,14 @@ export default function Home({ onLogout, onCompleteProfile }) {
                     <button onClick={() => setShowDeleteConfirm(false)} className="py-2 px-4 rounded bg-gray-200">Cancel</button>
                     <button
                       onClick={async () => {
-                        if (!uid || !idTokenState) return
+                        if (!userId || !token) return
                         try {
                           const dbUrl = import.meta.env.VITE_FIREBASE_DATABASE_URL
-                          const delUrl = `${dbUrl.replace(/\/$/, '')}/users/${uid}/expenses/${currentExpense.id}.json?auth=${idTokenState}`
+                          const delUrl = `${dbUrl.replace(/\/$/, '')}/users/${userId}/expenses/${currentExpense.id}.json?auth=${token}`
                           const res = await fetch(delUrl, { method: 'DELETE' })
                           if (!res.ok) throw new Error('Failed to delete')
                           // remove from UI
-                          setExpenses((prev) => prev.filter((p) => p.id !== currentExpense.id))
+                          dispatch(deleteExpense(currentExpense.id))
                           console.log('Expense successfuly deleted')
                           setShowDeleteConfirm(false)
                           setCurrentExpense(null)
@@ -369,11 +389,11 @@ export default function Home({ onLogout, onCompleteProfile }) {
                   <form
                     onSubmit={async (e) => {
                       e.preventDefault()
-                      if (!uid || !idTokenState) return
+                      if (!userId || !token) return
                       setEditSubmitting(true)
                       try {
                         const dbUrl = import.meta.env.VITE_FIREBASE_DATABASE_URL
-                        const putUrl = `${dbUrl.replace(/\/$/, '')}/users/${uid}/expenses/${currentExpense.id}.json?auth=${idTokenState}`
+                        const putUrl = `${dbUrl.replace(/\/$/, '')}/users/${userId}/expenses/${currentExpense.id}.json?auth=${token}`
                         const payload = {
                           amount: Number(currentExpense.amount),
                           desc: currentExpense.desc,
@@ -390,7 +410,7 @@ export default function Home({ onLogout, onCompleteProfile }) {
                           throw new Error(json?.error || 'Failed to update')
                         }
                         // update UI
-                        setExpenses((prev) => prev.map((p) => (p.id === currentExpense.id ? { id: p.id, ...payload } : p)))
+                        dispatch(editExpense({ id: currentExpense.id, ...payload }))
                         setShowEditModal(false)
                         setCurrentExpense(null)
                       } catch (err) {

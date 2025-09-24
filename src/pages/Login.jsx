@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth'
 import { z } from 'zod'
+import { useDispatch } from 'react-redux'
+import { login } from '../slices/authSlice'
 
 export default function Login({ onLoginSuccess, onSwitchToSignUp, onForgot }) {
   const [email, setEmail] = useState('')
@@ -9,6 +11,7 @@ export default function Login({ onLoginSuccess, onSwitchToSignUp, onForgot }) {
   const [error, setError] = useState(null)
   const [fieldErrors, setFieldErrors] = useState({})
   const [focused, setFocused] = useState({ email: false, password: false })
+  const dispatch = useDispatch()
 
   const schema = z.object({
     email: z.string().min(1, 'Email is required').email('Invalid email'),
@@ -38,6 +41,7 @@ export default function Login({ onLoginSuccess, onSwitchToSignUp, onForgot }) {
       // Get token and store it
       const token = await result.user.getIdToken()
       localStorage.setItem('expensetracker_token', token)
+      dispatch(login({ token, userId: result.user.uid }))
       onLoginSuccess()
     } catch (err) {
       let message = err.message || 'Login failed'
