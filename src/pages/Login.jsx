@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth'
 import { z } from 'zod'
 
-export default function Login({ onLoginSuccess, onSwitchToSignUp }) {
+export default function Login({ onLoginSuccess, onSwitchToSignUp, onForgot }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -94,17 +94,31 @@ export default function Login({ onLoginSuccess, onSwitchToSignUp }) {
         </form>
         </div>
         <div className="text-center mt-3 text-sm text-gray-600 dark:text-gray-300">
-        <span>Don't have an account? </span>
-        <a
-          href="#"
-          onClick={(e) => {
-            e.preventDefault()
-            onSwitchToSignUp && onSwitchToSignUp()
-          }}
-          className="text-blue-600 dark:text-blue-400 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-300 rounded px-1"
-        >
-          Sign up
-        </a>
+        <div className="mb-2">
+          <span>Don't have an account? </span>
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault()
+              onSwitchToSignUp && onSwitchToSignUp()
+            }}
+            className="text-blue-600 dark:text-blue-400 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-300 rounded px-1"
+          >
+            Sign up
+          </a>
+        </div>
+        <div>
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault()
+              onForgot && onForgot()
+            }}
+            className="text-sm text-gray-700 dark:text-gray-300 hover:underline"
+          >
+            Forgot password?
+          </a>
+        </div>
       </div>
     </div>
   </div>

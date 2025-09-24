@@ -3,9 +3,10 @@ import SignUp from './pages/SignUp'
 import Login from './pages/Login'
 import Welcome from './pages/Welcome'
 import Profile from './pages/Profile'
+import ForgotPassword from './pages/ForgotPassword'
 
 export default function App() {
-  const [route, setRoute] = useState('signup') // 'signup' | 'login' | 'welcome'
+  const [route, setRoute] = useState('signup') // 'signup' | 'login' | 'welcome' | 'forgot'
 
   useEffect(() => {
     const token = localStorage.getItem('expensetracker_token')
@@ -34,8 +35,9 @@ export default function App() {
         <div className="w-full max-w-2xl">
           {route === 'signup' && <SignUp onSwitchToLogin={() => setRoute('login')} />}
           {route === 'login' && (
-            <Login onLoginSuccess={handleLoginSuccess} onSwitchToSignUp={() => setRoute('signup')} />
+            <Login onLoginSuccess={handleLoginSuccess} onSwitchToSignUp={() => setRoute('signup')} onForgot={() => setRoute('forgot')} />
           )}
+          {route === 'forgot' && <ForgotPassword onBack={() => setRoute('login')} />}
           {route === 'welcome' && <Welcome onLogout={handleLogout} onCompleteProfile={handleCompleteProfile} />}
           {route === 'profile' && <Profile onUpdated={handleProfileUpdated} />}
         </div>
