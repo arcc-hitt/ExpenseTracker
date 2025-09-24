@@ -7,6 +7,10 @@ export default function Home({ onLogout, onCompleteProfile }) {
   const [sending, setSending] = useState(false)
   const [message, setMessage] = useState(null)
   const [sendError, setSendError] = useState(null)
+  const [uid, setUid] = useState(null)
+  const [idTokenState, setIdTokenState] = useState(null)
+  const [expSubmitting, setExpSubmitting] = useState(false)
+  const [expError, setExpError] = useState(null)
   // Local-only Daily Expenses state
   const [amount, setAmount] = useState('')
   const [desc, setDesc] = useState('')
@@ -56,6 +60,27 @@ export default function Home({ onLogout, onCompleteProfile }) {
 
         const profileData = await profileRes.json()
         if (mounted) setProfile(profileData)
+        // fetch expenses for the user
+        if (mounted) {
+          setIdTokenState(idToken)
+          setUid(uid)
+          // load expenses
+          try {
+            const expUrl = `${dbUrl.replace(/\/$/, '')}/users/${uid}/expenses.json?auth=${idToken}`
+            const expRes = await fetch(expUrl)
+            if (expRes.ok) {
+              const expJson = await expRes.json()
+              if (mounted && expJson) {
+                const list = Object.keys(expJson || {}).map((key) => ({ id: key, ...expJson[key] }))
+                // sort by timestamp desc
+                list.sort((a, b) => (b.ts || 0) - (a.ts || 0))
+                setExpenses(list)
+              }
+            }
+          } catch (err) {
+            console.error('Failed to load expenses', err)
+          }
+        }
       } catch (err) {
         console.error('Failed to load profile', err)
       } finally {
@@ -163,8 +188,9 @@ export default function Home({ onLogout, onCompleteProfile }) {
           <div className="mt-8 text-left">
             <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">Daily Expenses</h3>
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault()
+                setExpError(null)
                 const errors = {}
                 const value = parseFloat(String(amount).replace(/,/g, ''))
                 if (!amount || isNaN(value) || value <= 0) errors.amount = 'Enter a valid amount (> 0)'
@@ -173,17 +199,44 @@ export default function Home({ onLogout, onCompleteProfile }) {
                 setExpErrors(errors)
                 if (Object.keys(errors).length > 0) return
 
-                const item = {
-                  id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+                if (!uid || !idTokenState) {
+                  setExpError('Not authenticated')
+                  return
+                }
+
+                const payload = {
                   amount: Number(value.toFixed(2)),
                   desc: desc.trim(),
                   category,
                   ts: Date.now(),
                 }
-                setExpenses((prev) => [item, ...prev])
-                setAmount('')
-                setDesc('')
-                setCategory('')
+
+                setExpSubmitting(true)
+                try {
+                  const dbUrl = import.meta.env.VITE_FIREBASE_DATABASE_URL
+                  const postUrl = `${dbUrl.replace(/\/$/, '')}/users/${uid}/expenses.json?auth=${idTokenState}`
+                  const res = await fetch(postUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                  })
+                  const json = await res.json()
+                  if (!res.ok) {
+                    throw new Error(json?.error || 'Failed to save expense')
+                  }
+                  // Firebase returns { name: '<generated-key>' }
+                  const newId = json.name
+                  const item = { id: newId, ...payload }
+                  setExpenses((prev) => [item, ...prev])
+                  setAmount('')
+                  setDesc('')
+                  setCategory('')
+                } catch (err) {
+                  console.error('Failed to save expense', err)
+                  setExpError(err.message || 'Failed to save expense')
+                } finally {
+                  setExpSubmitting(false)
+                }
               }}
               className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end"
               noValidate
@@ -230,12 +283,15 @@ export default function Home({ onLogout, onCompleteProfile }) {
                   </select>
                   {expErrors.category && <p className="text-red-600 text-sm mt-1">{expErrors.category}</p>}
                 </div>
-                <button type="submit" className="self-end bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded h-10">Add</button>
+                <button type="submit" disabled={expSubmitting} className="self-end bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded h-10">
+                  {expSubmitting ? 'Saving…' : 'Add'}
+                </button>
               </div>
             </form>
 
             {/* List */}
             <div className="mt-6">
+              {expError && <div className="mb-3 text-sm text-red-700 bg-red-100 px-3 py-2 rounded">{expError}</div>}
               {expenses.length === 0 ? (
                 <p className="text-sm text-gray-600 dark:text-gray-300">No expenses added yet.</p>
               ) : (
