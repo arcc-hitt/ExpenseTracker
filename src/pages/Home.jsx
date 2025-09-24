@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react'
 
-export default function Welcome({ onLogout, onCompleteProfile }) {
+export default function Home({ onLogout, onCompleteProfile }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [userMeta, setUserMeta] = useState(null) // { email, emailVerified }
   const [sending, setSending] = useState(false)
   const [message, setMessage] = useState(null)
   const [sendError, setSendError] = useState(null)
+  // Local-only Daily Expenses state
+  const [amount, setAmount] = useState('')
+  const [desc, setDesc] = useState('')
+  const [category, setCategory] = useState('')
+  const [expErrors, setExpErrors] = useState({})
+  const [expenses, setExpenses] = useState([])
 
   useEffect(() => {
     let mounted = true
@@ -150,6 +156,103 @@ export default function Welcome({ onLogout, onCompleteProfile }) {
               <button onClick={() => onCompleteProfile && onCompleteProfile()} className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">Complete profile</button>
             </div>
           </>
+        )}
+
+        {/* Daily Expenses section (local-only) */}
+        {!loading && (
+          <div className="mt-8 text-left">
+            <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">Daily Expenses</h3>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                const errors = {}
+                const value = parseFloat(String(amount).replace(/,/g, ''))
+                if (!amount || isNaN(value) || value <= 0) errors.amount = 'Enter a valid amount (> 0)'
+                if (!desc || desc.trim().length === 0) errors.desc = 'Description is required'
+                if (!category) errors.category = 'Select a category'
+                setExpErrors(errors)
+                if (Object.keys(errors).length > 0) return
+
+                const item = {
+                  id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+                  amount: Number(value.toFixed(2)),
+                  desc: desc.trim(),
+                  category,
+                  ts: Date.now(),
+                }
+                setExpenses((prev) => [item, ...prev])
+                setAmount('')
+                setDesc('')
+                setCategory('')
+              }}
+              className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end"
+              noValidate
+            >
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Amount</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full rounded border border-gray-200 dark:border-gray-700 py-2 px-3 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                />
+                {expErrors.amount && <p className="text-red-600 text-sm mt-1">{expErrors.amount}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Description</label>
+                <input
+                  type="text"
+                  value={desc}
+                  onChange={(e) => setDesc(e.target.value)}
+                  placeholder="e.g. Lunch at cafe"
+                  className="w-full rounded border border-gray-200 dark:border-gray-700 py-2 px-3 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                />
+                {expErrors.desc && <p className="text-red-600 text-sm mt-1">{expErrors.desc}</p>}
+              </div>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Category</label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full rounded border border-gray-200 dark:border-gray-700 py-2 px-3 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  >
+                    <option value="">Select</option>
+                    <option value="Food">Food</option>
+                    <option value="Petrol">Petrol</option>
+                    <option value="Salary">Salary</option>
+                    <option value="Entertainment">Entertainment</option>
+                    <option value="Groceries">Groceries</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  {expErrors.category && <p className="text-red-600 text-sm mt-1">{expErrors.category}</p>}
+                </div>
+                <button type="submit" className="self-end bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded h-10">Add</button>
+              </div>
+            </form>
+
+            {/* List */}
+            <div className="mt-6">
+              {expenses.length === 0 ? (
+                <p className="text-sm text-gray-600 dark:text-gray-300">No expenses added yet.</p>
+              ) : (
+                <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {expenses.map((ex) => (
+                    <li key={ex.id} className="py-3 flex items-center justify-between">
+                      <div className="text-left">
+                        <p className="text-gray-800 dark:text-gray-100 font-medium">{ex.desc}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(ex.ts).toLocaleString()} • {ex.category}</p>
+                      </div>
+                      <div className="text-right font-semibold text-gray-800 dark:text-gray-100">₹ {ex.amount.toFixed(2)}</div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>
