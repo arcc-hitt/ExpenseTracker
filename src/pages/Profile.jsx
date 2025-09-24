@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
-import { auth, database, storage } from '../firebase'
+import { auth, database } from '../firebase'
 import { updateProfile } from 'firebase/auth'
 import { ref, set } from 'firebase/database'
-import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage'
 import { z } from 'zod'
 
 export default function Profile({ onUpdated }) {
@@ -18,11 +17,21 @@ export default function Profile({ onUpdated }) {
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [localPreview, setLocalPreview] = useState(photoUrl || '')
+  const [storedInDb, setStoredInDb] = useState(false)
+  const [info, setInfo] = useState(null)
 
   const ProfileSchema = z
     .object({
       displayName: z.string().min(1, 'Full name is required'),
-      photoUrl: z.string().url('Photo URL must be a valid URL').optional().or(z.literal('')),
+      // accept http(s) urls, data: urls, or empty
+      photoUrl: z
+        .string()
+        .optional()
+        .or(z.literal(''))
+        .refine((val) => {
+          if (!val) return true
+          return /^https?:\/\//.test(val) || /^data:/.test(val)
+        }, { message: 'Photo URL must be a valid HTTP URL or a data URL' }),
       phone: z
         .string()
         .optional()
@@ -51,7 +60,13 @@ export default function Profile({ onUpdated }) {
     setLoading(true)
     try {
       if (user) {
-        await updateProfile(user, { displayName, photoURL: photoUrl })
+        const authUpdate = /^https?:\/\//.test(photoUrl)
+          ? { displayName, photoURL: photoUrl }
+          : { displayName }
+        if (!/^https?:\/\//.test(photoUrl) && photoUrl) {
+          setInfo('Using an embedded image; saved in your profile data but not set as the Firebase Auth photo.')
+        }
+        await updateProfile(user, authUpdate)
         await set(ref(database, `users/${user.uid}/profile`), {
           displayName,
           phone,
@@ -68,38 +83,45 @@ export default function Profile({ onUpdated }) {
   }
 
   const handleFileChange = (e) => {
-    const file = e.target.files && e.target.files[0]
-    if (!file) return
-    // preview locally
-    const url = URL.createObjectURL(file)
-    setLocalPreview(url)
+    ; (async () => {
+      const file = e.target.files && e.target.files[0]
+      if (!file) return
+      const url = URL.createObjectURL(file)
+      setLocalPreview(url)
 
-    // upload to Firebase Storage
-    const userId = auth.currentUser?.uid
-    if (!userId) return
-    const storagePath = `users/${userId}/profile_${Date.now()}_${file.name}`
-    const sRef = storageRef(storage, storagePath)
-    const uploadTask = uploadBytesResumable(sRef, file)
-    setUploading(true)
-    setUploadProgress(0)
-
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const percent = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
-        setUploadProgress(percent)
-      },
-      (err) => {
-        console.error('Upload failed', err)
-        setUploading(false)
-      },
-      async () => {
-        const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref)
-        setPhotoUrl(downloadUrl)
-        setUploading(false)
-        setUploadProgress(100)
+      try {
+        const dataUrl = await fileToDataUrl(file)
+        const approxBytes = Math.ceil((dataUrl.length * 3) / 4)
+        const maxBytes = 300 * 1024
+        if (approxBytes > maxBytes) {
+          setError('Image is too large to store in Realtime Database. Please select a smaller image.')
+          return
+        }
+        setPhotoUrl(dataUrl)
+        setLocalPreview(dataUrl)
+        setStoredInDb(true)
+      } catch (err) {
+        console.error('Failed to convert file to data URL', err)
+        setError('Failed to read image file')
       }
-    )
+    })()
+  }
+
+  const handleRemovePhoto = () => {
+    setPhotoUrl('')
+    setLocalPreview('')
+    setStoredInDb(false)
+    setInfo(null)
+  }
+
+  // convert File to data URL
+  function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
   }
 
   // Load previously saved profile from Realtime Database using idToken
@@ -169,57 +191,82 @@ export default function Profile({ onUpdated }) {
     <div className="w-full px-4 sm:px-6">
       <div className="mx-auto w-full max-w-md md:max-w-lg lg:max-w-lg">
         <div className="bg-white dark:bg-gray-800 shadow-md rounded px-6 sm:px-10 pt-6 pb-8 mb-4">
-        <h2 className="text-center text-2xl font-semibold mb-6 text-gray-800 dark:text-gray-200">Complete your profile</h2>
-        {error && <div className="mb-4 text-sm text-red-700 bg-red-100 p-2 rounded">{error}</div>}
-        <form onSubmit={handleUpdate}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Full name</label>
-            <input
-              aria-label="Full name"
-              className={`shadow-sm border ${focused.displayName ? 'border-blue-400 ring-2 ring-blue-200' : 'border-gray-200 dark:border-gray-700'} rounded w-full py-2 px-3 text-gray-700 dark:text-gray-100 leading-tight transition duration-150 ease-in-out focus:outline-none`}
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              onFocus={() => setFocused((s) => ({ ...s, displayName: true }))}
-              onBlur={() => setFocused((s) => ({ ...s, displayName: false }))}
-            />
-            {fieldErrors.displayName && <p className="text-red-600 text-sm mt-1">{fieldErrors.displayName[0]}</p>}
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Upload photo</label>
-            <div className="flex items-center gap-3">
-              <input type="file" accept="image/*" onChange={handleFileChange} />
+          <h2 className="text-center text-2xl font-semibold mb-6 text-gray-800 dark:text-gray-200">Complete your profile</h2>
+          {error && <div className="mb-4 text-sm text-red-700 bg-red-100 p-2 rounded">{error}</div>}
+          {info && <div className="mb-4 text-sm text-blue-700 bg-blue-100 p-2 rounded">{info}</div>}
+          <form onSubmit={handleUpdate}>
+            <div className="flex flex-col items-center mb-6">
+              {/* Avatar preview */}
               {localPreview ? (
-                <img src={localPreview} alt="preview" className="h-16 w-16 rounded-full object-cover" />
+                <img src={localPreview} alt="avatar" className="h-24 w-24 rounded-full object-cover mb-3 shadow-sm" />
               ) : (
-                <div className="h-16 w-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500">No preview</div>
+                <div className="h-24 w-24 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-2xl font-semibold text-gray-600 dark:text-gray-200 mb-3 shadow-sm">
+                  {displayName ? displayName.split(' ').map(s => s[0]).slice(0, 2).join('') : 'JD'}
+                </div>
               )}
+
+              <div className="flex items-center gap-3">
+                <label htmlFor="file-upload" className="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-sm rounded-md cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600">
+                  Upload photo
+                </label>
+                <input id="file-upload" className="hidden" type="file" accept="image/*" onChange={handleFileChange} />
+                <button type="button" onClick={handleRemovePhoto} className="text-sm text-red-600 hover:underline">Remove</button>
+              </div>
+
+              {storedInDb && <div className="mt-2 text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">Stored in DB</div>}
+              {uploading && <p className="text-sm text-gray-600 mt-2">Uploading: {uploadProgress}%</p>}
+              <p className="mt-2 text-sm text-gray-500">You can also paste an image URL below.</p>
             </div>
-            {uploading && <p className="text-sm text-gray-600 mt-2">Uploading: {uploadProgress}%</p>}
-            <p className="mt-2 text-sm text-gray-500">Or paste an image URL below</p>
-          </div>
 
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Phone</label>
-            <input
-              aria-label="Phone"
-              className={`shadow-sm border ${focused.phone ? 'border-blue-400 ring-2 ring-blue-200' : 'border-gray-200 dark:border-gray-700'} rounded w-full py-2 px-3 text-gray-700 dark:text-gray-100 leading-tight transition duration-150 ease-in-out focus:outline-none`}
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              onFocus={() => setFocused((s) => ({ ...s, phone: true }))}
-              onBlur={() => setFocused((s) => ({ ...s, phone: false }))}
-            />
-            {fieldErrors.phone && <p className="text-red-600 text-sm mt-1">{fieldErrors.phone[0]}</p>}
-          </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Photo URL</label>
+              <input
+                aria-label="Photo URL"
+                className={`shadow-sm border ${focused.photoUrl ? 'border-blue-400 ring-2 ring-blue-200' : 'border-gray-200 dark:border-gray-700'} rounded w-full py-2 px-3 text-gray-700 dark:text-gray-100 leading-tight transition duration-150 ease-in-out focus:outline-none`}
+                type="url"
+                value={photoUrl}
+                onChange={(e) => setPhotoUrl(e.target.value)}
+                placeholder="https://example.com/photo.jpg or data:image/png;base64,..."
+                onFocus={() => setFocused((s) => ({ ...s, photoUrl: true }))}
+                onBlur={() => setFocused((s) => ({ ...s, photoUrl: false }))}
+              />
+              {fieldErrors.photoUrl && <p className="text-red-600 text-sm mt-1">{fieldErrors.photoUrl[0]}</p>}
+            </div>
 
-          <div className="flex items-center justify-center">
-            <button className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-md w-full disabled:opacity-50" type="submit" disabled={loading}>
-              {loading ? 'Updating...' : 'Update'}
-            </button>
-          </div>
-        </form>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Full name</label>
+              <input
+                aria-label="Full name"
+                className={`shadow-sm border ${focused.displayName ? 'border-blue-400 ring-2 ring-blue-200' : 'border-gray-200 dark:border-gray-700'} rounded w-full py-2 px-3 text-gray-700 dark:text-gray-100 leading-tight transition duration-150 ease-in-out focus:outline-none`}
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                onFocus={() => setFocused((s) => ({ ...s, displayName: true }))}
+                onBlur={() => setFocused((s) => ({ ...s, displayName: false }))}
+              />
+              {fieldErrors.displayName && <p className="text-red-600 text-sm mt-1">{fieldErrors.displayName[0]}</p>}
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Phone</label>
+              <input
+                aria-label="Phone"
+                className={`shadow-sm border ${focused.phone ? 'border-blue-400 ring-2 ring-blue-200' : 'border-gray-200 dark:border-gray-700'} rounded w-full py-2 px-3 text-gray-700 dark:text-gray-100 leading-tight transition duration-150 ease-in-out focus:outline-none`}
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                onFocus={() => setFocused((s) => ({ ...s, phone: true }))}
+                onBlur={() => setFocused((s) => ({ ...s, phone: false }))}
+              />
+              {fieldErrors.phone && <p className="text-red-600 text-sm mt-1">{fieldErrors.phone[0]}</p>}
+            </div>
+
+            <div className="flex items-center justify-center">
+              <button className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-md w-full disabled:opacity-50" type="submit" disabled={loading}>
+                {loading ? 'Updating...' : 'Update'}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
