@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Modal from '../components/Modal'
 
 export default function Home({ onLogout, onCompleteProfile }) {
   const [profile, setProfile] = useState(null)
@@ -17,6 +18,10 @@ export default function Home({ onLogout, onCompleteProfile }) {
   const [category, setCategory] = useState('')
   const [expErrors, setExpErrors] = useState({})
   const [expenses, setExpenses] = useState([])
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [currentExpense, setCurrentExpense] = useState(null)
+  const [editSubmitting, setEditSubmitting] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -183,7 +188,7 @@ export default function Home({ onLogout, onCompleteProfile }) {
           </>
         )}
 
-        {/* Daily Expenses section (local-only) */}
+        {/* Daily Expenses section */}
         {!loading && (
           <div className="mt-8 text-left">
             <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">Daily Expenses</h3>
@@ -302,10 +307,126 @@ export default function Home({ onLogout, onCompleteProfile }) {
                         <p className="text-gray-800 dark:text-gray-100 font-medium">{ex.desc}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(ex.ts).toLocaleString()} • {ex.category}</p>
                       </div>
-                      <div className="text-right font-semibold text-gray-800 dark:text-gray-100">₹ {ex.amount.toFixed(2)}</div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-right font-semibold text-gray-800 dark:text-gray-100">₹ {ex.amount.toFixed(2)}</div>
+                        <button
+                          onClick={() => {
+                            setCurrentExpense(ex)
+                            setShowEditModal(true)
+                          }}
+                          className="text-sm bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => {
+                            setCurrentExpense(ex)
+                            setShowDeleteConfirm(true)
+                          }}
+                          className="text-sm bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>
+              )}
+              {/* Delete confirmation modal */}
+              {showDeleteConfirm && currentExpense && (
+                <Modal title="Delete expense" onClose={() => setShowDeleteConfirm(false)}>
+                  <p className="mb-4 text-gray-700 dark:text-gray-100">Are you sure you want to delete "{currentExpense.desc}"?</p>
+                  <div className="flex justify-end gap-3">
+                    <button onClick={() => setShowDeleteConfirm(false)} className="py-2 px-4 rounded bg-gray-200">Cancel</button>
+                    <button
+                      onClick={async () => {
+                        if (!uid || !idTokenState) return
+                        try {
+                          const dbUrl = import.meta.env.VITE_FIREBASE_DATABASE_URL
+                          const delUrl = `${dbUrl.replace(/\/$/, '')}/users/${uid}/expenses/${currentExpense.id}.json?auth=${idTokenState}`
+                          const res = await fetch(delUrl, { method: 'DELETE' })
+                          if (!res.ok) throw new Error('Failed to delete')
+                          // remove from UI
+                          setExpenses((prev) => prev.filter((p) => p.id !== currentExpense.id))
+                          console.log('Expense successfuly deleted')
+                          setShowDeleteConfirm(false)
+                          setCurrentExpense(null)
+                        } catch (err) {
+                          console.error('Delete failed', err)
+                        }
+                      }}
+                      className="py-2 px-4 rounded bg-red-600 text-white"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </Modal>
+              )}
+
+              {/* Edit modal */}
+              {showEditModal && currentExpense && (
+                <Modal title="Edit expense" onClose={() => setShowEditModal(false)}>
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault()
+                      if (!uid || !idTokenState) return
+                      setEditSubmitting(true)
+                      try {
+                        const dbUrl = import.meta.env.VITE_FIREBASE_DATABASE_URL
+                        const putUrl = `${dbUrl.replace(/\/$/, '')}/users/${uid}/expenses/${currentExpense.id}.json?auth=${idTokenState}`
+                        const payload = {
+                          amount: Number(currentExpense.amount),
+                          desc: currentExpense.desc,
+                          category: currentExpense.category,
+                          ts: currentExpense.ts || Date.now(),
+                        }
+                        const res = await fetch(putUrl, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(payload),
+                        })
+                        if (!res.ok) {
+                          const json = await res.json()
+                          throw new Error(json?.error || 'Failed to update')
+                        }
+                        // update UI
+                        setExpenses((prev) => prev.map((p) => (p.id === currentExpense.id ? { id: p.id, ...payload } : p)))
+                        setShowEditModal(false)
+                        setCurrentExpense(null)
+                      } catch (err) {
+                        console.error('Update failed', err)
+                      } finally {
+                        setEditSubmitting(false)
+                      }
+                    }}
+                  >
+                    <div className="grid gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Amount</label>
+                        <input type="number" step="0.01" value={currentExpense.amount} onChange={(e) => setCurrentExpense((c) => ({ ...c, amount: e.target.value }))} className="w-full rounded border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-100 py-2 px-3" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Description</label>
+                        <input type="text" value={currentExpense.desc} onChange={(e) => setCurrentExpense((c) => ({ ...c, desc: e.target.value }))} className="w-full rounded border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-100 py-2 px-3" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Category</label>
+                        <select value={currentExpense.category} onChange={(e) => setCurrentExpense((c) => ({ ...c, category: e.target.value }))} className="w-full rounded border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-100 py-2 px-3">
+                          <option value="Food">Food</option>
+                          <option value="Petrol">Petrol</option>
+                          <option value="Salary">Salary</option>
+                          <option value="Entertainment">Entertainment</option>
+                          <option value="Groceries">Groceries</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div className="flex justify-end gap-3">
+                        <button type="button" onClick={() => { setShowEditModal(false); setCurrentExpense(null) }} className="py-2 px-4 rounded bg-gray-200">Cancel</button>
+                        <button type="submit" disabled={editSubmitting} className="py-2 px-4 rounded bg-blue-600 text-white">{editSubmitting ? 'Saving…' : 'Submit'}</button>
+                      </div>
+                    </div>
+                  </form>
+                </Modal>
               )}
             </div>
           </div>
