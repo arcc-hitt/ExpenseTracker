@@ -114,7 +114,7 @@ export default function Login({ onLoginSuccess, onSwitchToSignUp, onForgot }) {
               e.preventDefault()
               onForgot && onForgot()
             }}
-            className="text-sm text-gray-700 dark:text-gray-300 hover:underline"
+            className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
           >
             Forgot password?
           </a>
