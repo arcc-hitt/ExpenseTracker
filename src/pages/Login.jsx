@@ -8,6 +8,7 @@ export default function Login({ onLoginSuccess, onSwitchToSignUp }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [fieldErrors, setFieldErrors] = useState({})
+  const [focused, setFocused] = useState({ email: false, password: false })
 
   const schema = z.object({
     email: z.string().min(1, 'Email is required').email('Invalid email'),
@@ -49,20 +50,39 @@ export default function Login({ onLoginSuccess, onSwitchToSignUp }) {
   }
 
   return (
-    <div className="w-full max-w-md">
-      <div className="bg-white dark:bg-gray-800 shadow-md rounded px-6 pt-6 pb-8 mb-4">
+    <div className="w-full px-4 sm:px-6">
+      <div className="mx-auto w-full max-w-md md:max-w-lg lg:max-w-lg">
+        <div className="bg-white dark:bg-gray-800 shadow-md rounded px-6 sm:px-10 pt-6 pb-8 mb-4">
         <h2 className="text-center text-2xl font-semibold mb-6 text-gray-800 dark:text-gray-200">Login</h2>
         {error && <div className="mb-4 text-sm text-red-700 bg-red-100 p-2 rounded">{error}</div>}
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Email</label>
-            <input className="shadow-sm border border-gray-200 dark:border-gray-700 rounded w-full py-2 px-3" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <input
+              aria-label="Email"
+              className={`shadow-sm border ${focused.email ? 'border-blue-400 ring-2 ring-blue-200' : 'border-gray-200 dark:border-gray-700'} rounded w-full py-2 px-3 text-gray-700 dark:text-gray-100 leading-tight transition duration-150 ease-in-out focus:outline-none`}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onFocus={() => setFocused((s) => ({ ...s, email: true }))}
+              onBlur={() => setFocused((s) => ({ ...s, email: false }))}
+              required
+            />
             {fieldErrors.email && <p className="text-red-600 text-sm mt-1">{fieldErrors.email[0]}</p>}
           </div>
 
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Password</label>
-            <input className="shadow-sm border border-gray-200 dark:border-gray-700 rounded w-full py-2 px-3" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <input
+              aria-label="Password"
+              className={`shadow-sm border ${focused.password ? 'border-blue-400 ring-2 ring-blue-200' : 'border-gray-200 dark:border-gray-700'} rounded w-full py-2 px-3 text-gray-700 dark:text-gray-100 leading-tight transition duration-150 ease-in-out focus:outline-none`}
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onFocus={() => setFocused((s) => ({ ...s, password: true }))}
+              onBlur={() => setFocused((s) => ({ ...s, password: false }))}
+              required
+            />
             {fieldErrors.password && <p className="text-red-600 text-sm mt-1">{fieldErrors.password[0]}</p>}
           </div>
 
@@ -72,8 +92,8 @@ export default function Login({ onLoginSuccess, onSwitchToSignUp }) {
             </button>
           </div>
         </form>
-      </div>
-      <div className="text-center mt-3 text-sm text-gray-600 dark:text-gray-300">
+        </div>
+        <div className="text-center mt-3 text-sm text-gray-600 dark:text-gray-300">
         <span>Don't have an account? </span>
         <a
           href="#"
@@ -87,5 +107,6 @@ export default function Login({ onLoginSuccess, onSwitchToSignUp }) {
         </a>
       </div>
     </div>
+  </div>
   )
 }
