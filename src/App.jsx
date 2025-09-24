@@ -1,10 +1,12 @@
 import { useMemo } from 'react'
-import { Routes, Route, Navigate, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom'
 import SignUp from './pages/SignUp'
 import Login from './pages/Login'
 import Home from './pages/Home'
 import Profile from './pages/Profile'
 import ForgotPassword from './pages/ForgotPassword'
+import { useDispatch } from 'react-redux'
+import { logout } from './slices/authSlice'
 
 function ProtectedRoute({ children }) {
   const token = useMemo(() => localStorage.getItem('expensetracker_token'), [])
@@ -14,8 +16,10 @@ function ProtectedRoute({ children }) {
 
 function ProtectedLayout() {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
   const handleLogout = () => {
     localStorage.removeItem('expensetracker_token')
+    dispatch(logout())
     navigate('/login', { replace: true })
   }
   return (
@@ -34,7 +38,6 @@ function ProtectedLayout() {
 
 export default function App() {
   const navigate = useNavigate()
-  const location = useLocation()
   const token = localStorage.getItem('expensetracker_token')
 
   return (
