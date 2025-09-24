@@ -1,11 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { initializeApp } from 'firebase/app'
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth'
 import { z } from 'zod'
 import { Eye, EyeOff } from 'lucide-react'
 
-// Read Firebase config from Vite environment variables (VITE_ prefix)
-// Create a .env file at the project root with these keys (see README for steps)
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -20,7 +18,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 const auth = getAuth(app)
 
-export default function SignUp() {
+export default function SignUp({ onSwitchToLogin }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -28,11 +26,10 @@ export default function SignUp() {
   const [error, setError] = useState(null)
   const [fieldErrors, setFieldErrors] = useState({})
   const [focused, setFocused] = useState({ email: false, password: false, confirmPassword: false })
-  // custom show/hide toggles (overlay) so icon is visible in dark mode
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  // password rule checks for realtime UI
+  // password rule checks
   const passwordChecks = {
     length: password.length >= 8,
     upper: /[A-Z]/.test(password),
@@ -42,7 +39,6 @@ export default function SignUp() {
   }
 
   // Zod schema for validation
-  // stronger password policy: min 8, upper, lower, number, special char
   const SignUpSchema = z
     .object({
       email: z.string().min(1, 'Email is required').email('Invalid email address'),
@@ -60,17 +56,6 @@ export default function SignUp() {
       message: "Passwords don't match",
     })
 
-  useEffect(() => {
-    // Warn early if any config is missing
-    const missing = Object.entries(firebaseConfig).filter(([, v]) => !v).map(([k]) => k)
-    if (missing.length) {
-      setError(
-        `Firebase config missing: ${missing.join(', ')}. Add them to your .env and restart the dev server.`,
-      )
-      console.error('Missing Firebase config keys:', missing)
-    }
-  }, [])
-
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError(null)
@@ -82,7 +67,6 @@ export default function SignUp() {
     } catch (err) {
       if (err instanceof z.ZodError) {
         const flattened = err.flatten()
-        // flattened.fieldErrors is an object like { email: ['...'], password: ['...'] }
         setFieldErrors(flattened.fieldErrors)
         return
       }
@@ -235,8 +219,18 @@ export default function SignUp() {
           </div>
         </form>
       </div>
-      <div className="text-center">
-        <button className="bg-green-50 border border-green-200 text-green-800 text-sm py-2 px-4 rounded w-full">Have an account? Login</button>
+      <div className="text-center mt-3 text-sm text-gray-600 dark:text-gray-300">
+        <span>Have an account? </span>
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault()
+            onSwitchToLogin && onSwitchToLogin()
+          }}
+          className="text-blue-600 dark:text-blue-400 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-300 rounded px-1"
+        >
+          Login
+        </a>
       </div>
     </div>
   </div>
