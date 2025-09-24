@@ -140,7 +140,6 @@ export default function Welcome({ onLogout, onCompleteProfile }) {
                 )}
 
                 <button onClick={() => onCompleteProfile && onCompleteProfile()} className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-6 rounded">Edit profile</button>
-                <button onClick={onLogout} className="bg-red-500 hover:bg-red-600 text-white py-2 px-6 rounded">Logout</button>
               </div>
             </div>
           </div>
@@ -149,7 +148,6 @@ export default function Welcome({ onLogout, onCompleteProfile }) {
             <p className="text-gray-600 dark:text-gray-300 mb-6">Your profile is incomplete. Please complete your profile to get the best experience.</p>
             <div className="flex items-center justify-center gap-3">
               <button onClick={() => onCompleteProfile && onCompleteProfile()} className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">Complete profile</button>
-              <button onClick={onLogout} className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded">Logout</button>
             </div>
           </>
         )}
