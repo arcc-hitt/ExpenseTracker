@@ -267,8 +267,9 @@ export default function Home({ onCompleteProfile }) {
               noValidate
             >
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Amount</label>
+                <label htmlFor="amount" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Amount</label>
                 <input
+                  id="amount"
                   type="number"
                   step="0.01"
                   inputMode="decimal"
@@ -280,8 +281,9 @@ export default function Home({ onCompleteProfile }) {
                 {expErrors.amount && <p className="text-red-600 text-sm mt-1">{expErrors.amount}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Description</label>
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Description</label>
                 <input
+                  id="description"
                   type="text"
                   value={desc}
                   onChange={(e) => setDesc(e.target.value)}
@@ -292,8 +294,9 @@ export default function Home({ onCompleteProfile }) {
               </div>
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Category</label>
+                  <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Category</label>
                   <select
+                    id="category"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     className="w-full rounded border border-gray-200 dark:border-gray-700 py-2 px-3 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-300"

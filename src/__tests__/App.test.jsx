@@ -1,4 +1,10 @@
 // Mock all the components that use import.meta.env
+jest.mock('../pages/Login', () => {
+  return function MockLogin() {
+    return <div data-testid="login-page">Login Page</div>;
+  };
+});
+
 jest.mock('../pages/SignUp', () => {
   return function MockSignUp() {
     return <div data-testid="signup-page">SignUp Page</div>;
@@ -23,11 +29,24 @@ jest.mock('../pages/ForgotPassword', () => {
   };
 });
 
+// Mock the firebase module to avoid import.meta.env usage
+jest.mock('../firebase', () => ({
+  auth: {},
+  db: {},
+}));
+
 import React from 'react';
 import { render } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
+import { BrowserRouter } from 'react-router-dom';
 import App from '../App';
+import authReducer from '../slices/authSlice';
+import expensesReducer from '../slices/expensesSlice';
+import themeReducer from '../slices/themeSlice';
+
+// Mock fetch for token validation API calls
+global.fetch = jest.fn();
 
 // Mock localStorage
 const localStorageMock = {
@@ -42,19 +61,21 @@ global.localStorage = localStorageMock;
 const createMockStore = (initialState = {}) => {
   return configureStore({
     reducer: {
-      auth: (state = { isLoggedIn: false, token: null, userId: null, isPremium: false }) => state,
-      theme: (state = { isDarkMode: false }) => state,
-      expenses: (state = { expenses: [], totalAmount: 0 }) => state,
-      ...initialState,
+      auth: authReducer,
+      theme: themeReducer,
+      expenses: expensesReducer,
     },
+    preloadedState: initialState,
   });
 };
 
-const renderWithProviders = (component, initialState) => {
+const renderWithProviders = (component, initialState = {}) => {
   const store = createMockStore(initialState);
   return render(
     <Provider store={store}>
-      {component}
+      <BrowserRouter>
+        {component}
+      </BrowserRouter>
     </Provider>
   );
 };
@@ -62,44 +83,73 @@ const renderWithProviders = (component, initialState) => {
 describe('App Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Default fetch mock for token validation
+    global.fetch.mockResolvedValue({
+      ok: false,
+      json: () => Promise.resolve({}),
+    });
   });
 
-  it('redirects to login when no token', () => {
+  it('redirects to login when no token', async () => {
     localStorageMock.getItem.mockReturnValue(null);
 
     renderWithProviders(<App />);
+
+    // Wait for token validation to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
 
     // Should redirect to login, but since we're not actually navigating,
     // we can check that the component renders without crashing
     expect(document.body).toBeInTheDocument();
   });
 
-  it('applies dark mode class when theme is dark', () => {
+  it('applies dark mode class when theme is dark', async () => {
     localStorageMock.getItem.mockReturnValue('test-token');
+    global.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ users: [{ localId: 'user123' }] }),
+    });
 
     renderWithProviders(<App />, {
-      theme: { isDarkMode: true },
+      theme: { isDark: true },
     });
+
+    // Wait for token validation to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(document.documentElement.classList.contains('dark')).toBe(true);
   });
 
-  it('removes dark mode class when theme is light', () => {
+  it('removes dark mode class when theme is light', async () => {
     localStorageMock.getItem.mockReturnValue('test-token');
+    global.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ users: [{ localId: 'user123' }] }),
+    });
 
     // First set dark mode
     document.documentElement.classList.add('dark');
 
     renderWithProviders(<App />, {
-      theme: { isDarkMode: false },
+      theme: { isDark: false },
     });
+
+    // Wait for token validation to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(document.documentElement.classList.contains('dark')).toBe(false);
   });
 
-  it('renders without crashing', () => {
+  it('renders without crashing', async () => {
     localStorageMock.getItem.mockReturnValue('test-token');
+    global.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ users: [{ localId: 'user123' }] }),
+    });
 
     expect(() => renderWithProviders(<App />)).not.toThrow();
+
+    // Wait for token validation to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
   });
 });
