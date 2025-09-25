@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useLayoutEffect } from 'react'
 import { Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom'
 import SignUp from './pages/SignUp'
 import Login from './pages/Login'
@@ -7,6 +7,7 @@ import Profile from './pages/Profile'
 import ForgotPassword from './pages/ForgotPassword'
 import { useDispatch } from 'react-redux'
 import { logout } from './slices/authSlice'
+import { useSelector } from 'react-redux'
 
 function ProtectedRoute({ children }) {
   const token = useMemo(() => localStorage.getItem('expensetracker_token'), [])
@@ -39,6 +40,15 @@ function ProtectedLayout() {
 export default function App() {
   const navigate = useNavigate()
   const token = localStorage.getItem('expensetracker_token')
+  const isDark = useSelector(state => state.theme.isDark)
+
+  useLayoutEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [isDark])
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
