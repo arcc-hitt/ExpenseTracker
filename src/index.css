@@ -1,5 +1,43 @@
 @import "tailwindcss";
 
+:root {
+  --bg-primary: #f9fafb;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --border-color: #e5e7eb;
+  --border-focus: #3b82f6;
+  --button-bg: #3b82f6;
+  --button-hover: #2563eb;
+  --button-secondary: #6b7280;
+  --button-secondary-hover: #4b5563;
+  --success-bg: #d1fae5;
+  --success-text: #065f46;
+  --error-bg: #fee2e2;
+  --error-text: #dc2626;
+}
+
+.dark {
+  --bg-primary: #111827;
+  --bg-secondary: #1f2937;
+  --bg-tertiary: #374151;
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-tertiary: #9ca3af;
+  --border-color: #4b5563;
+  --border-focus: #60a5fa;
+  --button-bg: #3b82f6;
+  --button-hover: #2563eb;
+  --button-secondary: #6b7280;
+  --button-secondary-hover: #4b5563;
+  --success-bg: #064e3b;
+  --success-text: #34d399;
+  --error-bg: #7f1d1d;
+  --error-text: #fca5a5;
+}
+
 /* Hide native password reveal (WebKit browsers) */
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear {

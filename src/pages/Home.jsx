@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import Modal from '../components/Modal'
 import { useSelector, useDispatch } from 'react-redux'
 import { setExpenses, addExpense, deleteExpense, editExpense } from '../slices/expensesSlice'
-import { login } from '../slices/authSlice'
+import { login, activatePremium } from '../slices/authSlice'
+import { toggleTheme } from '../slices/themeSlice'
 
 export default function Home({ onCompleteProfile }) {
   const dispatch = useDispatch()
-  const { token, userId } = useSelector(state => state.auth)
+  const { token, userId, isPremium } = useSelector(state => state.auth)
+  const { isDark } = useSelector(state => state.theme)
   const expenses = useSelector(state => state.expenses.expenses)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -25,6 +27,19 @@ export default function Home({ onCompleteProfile }) {
   const [showEditModal, setShowEditModal] = useState(false)
   const [currentExpense, setCurrentExpense] = useState(null)
   const [editSubmitting, setEditSubmitting] = useState(false)
+
+  const downloadCSV = () => {
+    const headers = ['Description', 'Amount', 'Category', 'Date'];
+    const rows = expenses.map(exp => [exp.desc, exp.amount, exp.category, new Date(exp.ts).toLocaleString()]);
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'expenses.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     let mounted = true
@@ -342,10 +357,20 @@ export default function Home({ onCompleteProfile }) {
                       <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">Total Expenses:</span>
                       <span className="text-lg font-bold text-gray-800 dark:text-gray-100">₹ {expenses.reduce((sum, ex) => sum + ex.amount, 0).toFixed(2)}</span>
                     </div>
-                    {expenses.reduce((sum, ex) => sum + ex.amount, 0) > 10000 && (
+                    {expenses.reduce((sum, ex) => sum + ex.amount, 0) > 10000 && !isPremium && (
                       <div className="mt-4">
-                        <button className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded">
+                        <button onClick={() => dispatch(activatePremium())} className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded">
                           Activate Premium
+                        </button>
+                      </div>
+                    )}
+                    {isPremium && (
+                      <div className="mt-4 flex gap-4">
+                        <button onClick={() => dispatch(toggleTheme())} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded">
+                          {isDark ? 'Light Mode' : 'Dark Mode'}
+                        </button>
+                        <button onClick={downloadCSV} className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded">
+                          Download CSV
                         </button>
                       </div>
                     )}
