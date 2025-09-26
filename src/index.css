@@ -1,5 +1,38 @@
 @import "tailwindcss";
 
+@layer base {
+  html {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+  /* Component surface helpers */
+  .card-surface {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+  }
+  /* Headings already inherit color from card; avoid overriding Tailwind utilities */
+
+  .input-basic {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  .input-basic:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--border-focus) 40%, transparent);
+  }
+  .muted-text { color: var(--text-secondary); }
+  .border-base { border-color: var(--border-color); }
+}
+
 :root {
   --bg-primary: #f9fafb;
   --bg-secondary: #ffffff;

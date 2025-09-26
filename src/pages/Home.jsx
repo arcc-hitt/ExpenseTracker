@@ -119,11 +119,11 @@ export default function Home({ onCompleteProfile }) {
 
   return (
     <div className="w-full max-w-2xl mx-auto text-center">
-      <div className="bg-white dark:bg-gray-800 shadow-md rounded px-8 pt-10 pb-12">
-        <h1 className="text-3xl font-bold mb-4 text-gray-800 dark:text-gray-100">Welcome to Expense Tracker</h1>
+      <div className="shadow-md rounded px-8 pt-10 pb-12 card-surface" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+  <h1 className="text-3xl font-bold mb-4">Welcome to Expense Tracker</h1>
 
         {loading ? (
-          <p className="text-gray-600 dark:text-gray-300 mb-6">Loading profile…</p>
+          <p className="muted-text mb-6">Loading profile…</p>
         ) : profile ? (
           <div className="mb-6">
             <div className="flex items-center justify-center gap-4 mb-4">
@@ -133,8 +133,8 @@ export default function Home({ onCompleteProfile }) {
                 <div className="h-20 w-20 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600">👤</div>
               )}
             </div>
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">{profile.displayName || 'No name provided'}</h2>
-            <p className="text-gray-600 dark:text-gray-300">{profile.phone || 'No phone provided'}</p>
+            <h2 className="text-xl font-semibold">{profile.displayName || 'No name provided'}</h2>
+            <p className="muted-text">{profile.phone || 'No phone provided'}</p>
             <div className="mt-6">
               {/* Full-width message / error banners */}
               {message && (
@@ -201,7 +201,7 @@ export default function Home({ onCompleteProfile }) {
           </div>
         ) : (
           <>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">Your profile is incomplete. Please complete your profile to get the best experience.</p>
+            <p className="muted-text mb-6">Your profile is incomplete. Please complete your profile to get the best experience.</p>
             <div className="flex items-center justify-center gap-3">
               <button onClick={() => onCompleteProfile && onCompleteProfile()} className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">Complete profile</button>
             </div>
@@ -211,7 +211,7 @@ export default function Home({ onCompleteProfile }) {
         {/* Daily Expenses section */}
         {!loading && (
           <div className="mt-8 text-left">
-            <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">Daily Expenses</h3>
+            <h3 className="text-xl font-semibold mb-4">Daily Expenses</h3>
             <form
               onSubmit={async (e) => {
                 e.preventDefault()
@@ -267,7 +267,7 @@ export default function Home({ onCompleteProfile }) {
               noValidate
             >
               <div>
-                <label htmlFor="amount" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Amount</label>
+                <label htmlFor="amount" className="block text-sm font-medium mb-1">Amount</label>
                 <input
                   id="amount"
                   type="number"
@@ -276,30 +276,30 @@ export default function Home({ onCompleteProfile }) {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
-                  className="w-full rounded border border-gray-200 dark:border-gray-700 py-2 px-3 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  className="w-full rounded py-2 px-3 input-basic"
                 />
                 {expErrors.amount && <p className="text-red-600 text-sm mt-1">{expErrors.amount}</p>}
               </div>
               <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Description</label>
+                <label htmlFor="description" className="block text-sm font-medium mb-1">Description</label>
                 <input
                   id="description"
                   type="text"
                   value={desc}
                   onChange={(e) => setDesc(e.target.value)}
                   placeholder="e.g. Lunch at cafe"
-                  className="w-full rounded border border-gray-200 dark:border-gray-700 py-2 px-3 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  className="w-full rounded py-2 px-3 input-basic"
                 />
                 {expErrors.desc && <p className="text-red-600 text-sm mt-1">{expErrors.desc}</p>}
               </div>
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Category</label>
+                  <label htmlFor="category" className="block text-sm font-medium mb-1">Category</label>
                   <select
                     id="category"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full rounded border border-gray-200 dark:border-gray-700 py-2 px-3 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    className="w-full rounded py-2 px-3 input-basic"
                   >
                     <option value="">Select</option>
                     <option value="Food">Food</option>
@@ -321,18 +321,18 @@ export default function Home({ onCompleteProfile }) {
             <div className="mt-6">
               {expError && <div className="mb-3 text-sm text-red-700 bg-red-100 px-3 py-2 rounded">{expError}</div>}
               {expenses.length === 0 ? (
-                <p className="text-sm text-gray-600 dark:text-gray-300">No expenses added yet.</p>
+                <p className="text-sm muted-text">No expenses added yet.</p>
               ) : (
                 <div>
-                  <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                  <ul className="divide-y" style={{ borderColor: 'var(--border-color)' }}>
                     {expenses.map((ex) => (
                       <li key={ex.id} className="py-3 flex items-center justify-between">
                         <div className="text-left">
-                          <p className="text-gray-800 dark:text-gray-100 font-medium">{ex.desc}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(ex.ts).toLocaleString()} • {ex.category}</p>
+                          <p className="font-medium">{ex.desc}</p>
+                          <p className="text-xs muted-text">{new Date(ex.ts).toLocaleString()} • {ex.category}</p>
                         </div>
                         <div className="flex items-center gap-3">
-                          <div className="text-right font-semibold text-gray-800 dark:text-gray-100">₹ {ex.amount.toFixed(2)}</div>
+                          <div className="text-right font-semibold">₹ {ex.amount.toFixed(2)}</div>
                           <button
                             onClick={() => {
                               setCurrentExpense(ex)
@@ -355,10 +355,10 @@ export default function Home({ onCompleteProfile }) {
                       </li>
                     ))}
                   </ul>
-                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--border-color)' }}>
                     <div className="flex justify-between items-center">
-                      <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">Total Expenses:</span>
-                      <span className="text-lg font-bold text-gray-800 dark:text-gray-100">₹ {expenses.reduce((sum, ex) => sum + ex.amount, 0).toFixed(2)}</span>
+                      <span className="text-lg font-semibold">Total Expenses:</span>
+                      <span className="text-lg font-bold">₹ {expenses.reduce((sum, ex) => sum + ex.amount, 0).toFixed(2)}</span>
                     </div>
                     {expenses.reduce((sum, ex) => sum + ex.amount, 0) > 10000 && !isPremium && (
                       <div className="mt-4">
@@ -383,7 +383,7 @@ export default function Home({ onCompleteProfile }) {
               {/* Delete confirmation modal */}
               {showDeleteConfirm && currentExpense && (
                 <Modal title="Delete expense" onClose={() => setShowDeleteConfirm(false)}>
-                  <p className="mb-4 text-gray-700 dark:text-gray-100">Are you sure you want to delete "{currentExpense.desc}"?</p>
+                  <p className="mb-4">Are you sure you want to delete "{currentExpense.desc}"?</p>
                   <div className="flex justify-end gap-3">
                     <button onClick={() => setShowDeleteConfirm(false)} className="py-2 px-4 rounded bg-gray-200">Cancel</button>
                     <button
@@ -450,16 +450,16 @@ export default function Home({ onCompleteProfile }) {
                   >
                     <div className="grid gap-3">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Amount</label>
-                        <input type="number" step="0.01" value={currentExpense.amount} onChange={(e) => setCurrentExpense((c) => ({ ...c, amount: e.target.value }))} className="w-full rounded border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-100 py-2 px-3" />
+                        <label className="block text-sm font-medium mb-1">Amount</label>
+                        <input type="number" step="0.01" value={currentExpense.amount} onChange={(e) => setCurrentExpense((c) => ({ ...c, amount: e.target.value }))} className="w-full rounded py-2 px-3 input-basic" />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Description</label>
-                        <input type="text" value={currentExpense.desc} onChange={(e) => setCurrentExpense((c) => ({ ...c, desc: e.target.value }))} className="w-full rounded border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-100 py-2 px-3" />
+                        <label className="block text-sm font-medium mb-1">Description</label>
+                        <input type="text" value={currentExpense.desc} onChange={(e) => setCurrentExpense((c) => ({ ...c, desc: e.target.value }))} className="w-full rounded py-2 px-3 input-basic" />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Category</label>
-                        <select value={currentExpense.category} onChange={(e) => setCurrentExpense((c) => ({ ...c, category: e.target.value }))} className="w-full rounded border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-100 py-2 px-3">
+                        <label className="block text-sm font-medium mb-1">Category</label>
+                        <select value={currentExpense.category} onChange={(e) => setCurrentExpense((c) => ({ ...c, category: e.target.value }))} className="w-full rounded py-2 px-3 input-basic">
                           <option value="Food">Food</option>
                           <option value="Petrol">Petrol</option>
                           <option value="Salary">Salary</option>
