@@ -24,7 +24,7 @@ function ProtectedLayout() {
     navigate('/login', { replace: true })
   }
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 relative">
+    <div className="min-h-screen p-6 relative" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <div className="absolute top-6 right-6">
         <button onClick={handleLogout} className="bg-red-500 hover:bg-red-600 text-white py-2 px-3 rounded">Logout</button>
       </div>
@@ -105,7 +105,7 @@ export default function App() {
   // Show loading while validating token
   if (isValidating) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+  <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-300">Loading...</p>
@@ -115,7 +115,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <Routes>
         {/* Default redirect based on auth */}
         <Route path="/" element={<Navigate to={isAuthenticated ? '/home' : '/login'} replace />} />
